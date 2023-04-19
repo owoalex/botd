@@ -5,9 +5,27 @@ import time
 import json
 from io import BytesIO
 import re
+import sys
+import requests
+import threading
 
-bot_list = []
-controller_list = []
+class BotClient(threading.Thread):
+    def __init__(self, thread_name, thread_ID):
+        threading.Thread.__init__(self)
+        self.thread_name = thread_name
+        self.thread_ID = thread_ID
+ 
+        # helper function to execute the threads
+    def run(self):
+        time.sleep(1)
+        print("Connecting to server @ %s" % (remote_server))
+        remote_server_base_uri = "http://" + remote_server
+        params = {"type": "BOT", "port": local_server_port}
+        request = requests.post(url = remote_server_base_uri + "/register", json = params)
+        data = request.json()
+        print(data)
+        
+        #print(str(self.thread_name) +" "+ str(self.thread_ID));
 
 class BotServer(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -111,14 +129,42 @@ class BotServer(BaseHTTPRequestHandler):
             self.wfile.write((reply_body + "\n").encode("utf-8"))
             
 
-if __name__ == "__main__":        
-    hostName = ""
-    serverPort = 8080
-    webServer = HTTPServer((hostName, serverPort), BotServer)
-    print("Server started http://%s:%s" % (hostName, serverPort))
-    try:
-        webServer.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    webServer.server_close()
-    print("Server stopped.")
+if __name__ == "__main__":  
+    switch_name = "PYFILE"
+    host_name = ""
+    remote_server = None
+    local_server_port = 8081
+    for arg in sys.argv:
+        if switch_name == None:
+            if (arg.startswith("-")):
+                if (arg.startswith("--")):
+                    if (arg == "--port"):
+                        switch_name = "PORT"
+                else:
+                    if (arg == "-p"):
+                        switch_name = "PORT"
+            else:
+                remote_server = arg
+        elif switch_name == "PORT":
+            local_server_port = int(arg)
+            switch_name = None
+        elif switch_name == "PYFILE":
+            switch_name = None
+        else:
+            print("Argument parse error!")
+    if remote_server == None:
+        print("No remote server supplied!")
+    else:
+        client_thread = BotClient("main_client", 128);
+        web_server = HTTPServer((host_name, local_server_port), BotServer)
+        if host_name == "":
+            print("Client responder starting on port %s" % (local_server_port))
+        else:
+            print("Client responder starting http://%s:%s" % (host_name, local_server_port))
+        client_thread.start()
+        try:
+            web_server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        web_server.server_close()
+        print("Client stopped.")
