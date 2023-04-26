@@ -1,0 +1,62 @@
+{
+    "type": "BOT",
+    "name": "Sherbert Lemon",
+    "uuid": "92faa9a1-c183-449d-9af4-69c23ec77c74",
+    "cameras": [
+        {
+            "name": "front_head",
+            "path": "/dev/v4l/by-id/usb-Jieli_Technology_USB_PHY_2.0-video-index0",
+            "fps": 15,
+            "resolution": [400,300],
+            "control_x": {
+                "type": "AXIS_CONTROL",
+                "axis": "yaw",
+                "rate": 1
+            }
+        }
+    ],
+    "control_scheme": "RPI_ONBOARD_GPIO",
+    "actuators": [
+        {
+            "name": "front",
+            "type": "BRUSHED",
+            "encoder_step": 0.1,
+            "has_encoder": true,
+            "motor_pins": [33, 36],
+            "encoder_pins": [13, 15]
+        },
+        {
+            "name": "left",
+            "type": "BRUSHED",
+            "encoder_step": 0.1,
+            "has_encoder": true,
+            "motor_pins": [35, 38],
+            "encoder_pins": [16, 18]
+        },
+        {
+            "name": "right",
+            "type": "BRUSHED",
+            "encoder_step": 0.1,
+            "has_encoder": true,
+            "motor_pins": [37, 40],
+            "encoder_pins": [29, 31]
+        }
+    ],
+    "intents": {
+        "x": {
+            "front": 0,
+            "left": 1,
+            "right": -1
+        },
+        "y": {
+            "front": -1,
+            "left": 0,
+            "right": 0
+        },
+        "yaw": {
+            "front": -1,
+            "left": -1,
+            "right": -1
+        }
+    }
+}

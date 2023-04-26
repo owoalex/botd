@@ -62,17 +62,13 @@ class BotServer(BaseHTTPRequestHandler):
         if (path_components[0] == "register"):
             error = None
             
-            device_definition = {
-                    "ip": self.client_address[0],
-                    "port": None
-                }
+            device_definition = body
+            device_definition["ip"] = self.client_address[0]
             
             idx = -1
             
             if (error == None):
-                if ("port" in body):
-                    device_definition["port"] = body["port"]
-                else:
+                if not ("port" in body):
                     error = "MISSING_DEVICE_PORT"
             
             if (error == None):
@@ -107,13 +103,31 @@ class BotServer(BaseHTTPRequestHandler):
                 }, indent=4)
                 self.wfile.write((reply_body + "\n").encode("utf-8"))
         elif (re.compile("^bot[0-9]+$").match(path_components[0])):
-            self.send_response(200)
-            self.end_headers()
-            reply_body = json.dumps({
-                    "status": "OK",
-                    "request": body
-                }, indent=4)
-            self.wfile.write((reply_body + "\n").encode("utf-8"))
+            if (len(path_components) > 1):
+                if (path_components[1] == "cmd"):
+                    bot_number = int(path_components[0][3:])
+                    destination_definition = bot_list[bot_number]
+                    #print(destination_definition["ip"])
+                    #print(destination_definition["port"])
+                    self.send_response(200)
+                    self.end_headers()
+                    reply_body = json.dumps({
+                            "status": "OK",
+                            "intent": body
+                        }, indent=4)
+                    self.wfile.write((reply_body + "\n").encode("utf-8"))
+                    
+                    remote_bot_base_uri = "http://" + destination_definition["ip"] + ":" + str(destination_definition["port"])
+                    bot_request = requests.post(url = remote_bot_base_uri + "/cmd", json = body)
+                    ret_data = request.json()
+            else:
+                self.send_response(200)
+                self.end_headers()
+                reply_body = json.dumps({
+                        "status": "OK",
+                        "request": body
+                    }, indent=4)
+                self.wfile.write((reply_body + "\n").encode("utf-8"))
         elif (re.compile("^controller[0-9]+$").match(path_components[0])):
             self.send_response(200)
             self.end_headers()
