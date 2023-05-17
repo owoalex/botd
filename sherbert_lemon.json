@@ -18,19 +18,25 @@
     "control_scheme": "RPI_ONBOARD_GPIO",
     "actuators": [
         {
-            "name": "front",
-            "type": "BRUSHED",
-            "encoder_step": 0.1,
-            "has_encoder": true,
-            "motor_pins": [33, 36],
-            "encoder_pins": [13, 15]
-        },
-        {
             "name": "left",
             "type": "BRUSHED",
             "encoder_step": 0.1,
             "has_encoder": true,
-            "motor_pins": [35, 38],
+            "motor_pins": {
+                "cw": 33,
+                "ccw": 36
+            },
+            "encoder_pins": [13, 15]
+        },
+        {
+            "name": "front",
+            "type": "BRUSHED",
+            "encoder_step": 0.1,
+            "has_encoder": true,
+            "motor_pins": {
+                "cw": 35, 
+                "ccw": 38,
+            },
             "encoder_pins": [16, 18]
         },
         {
@@ -38,7 +44,10 @@
             "type": "BRUSHED",
             "encoder_step": 0.1,
             "has_encoder": true,
-            "motor_pins": [37, 40],
+            "motor_pins": {
+                "cw": 37, 
+                "ccw": 40
+            },
             "encoder_pins": [29, 31]
         }
     ],

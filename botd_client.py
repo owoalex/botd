@@ -62,14 +62,14 @@ class BotClient(threading.Thread):
                     for actuator in bot_definition["actuators"]:
                         if actuator["type"] == "BRUSHED":
                             if output_motor_levels[actuator["name"]] > 0.1:
-                                GPIO.output(actuator["motor_pins"][0], GPIO.HIGH)
-                                GPIO.output(actuator["motor_pins"][1], GPIO.LOW)
+                                GPIO.output(actuator["motor_pins"]["cw"], GPIO.HIGH)
+                                GPIO.output(actuator["motor_pins"]["ccw"], GPIO.LOW)
                             elif output_motor_levels[actuator["name"]] < -0.1:
-                                GPIO.output(actuator["motor_pins"][1], GPIO.HIGH)
-                                GPIO.output(actuator["motor_pins"][0], GPIO.LOW)
+                                GPIO.output(actuator["motor_pins"]["cw"], GPIO.LOW)
+                                GPIO.output(actuator["motor_pins"]["ccw"], GPIO.HIGH)
                             else:
-                                GPIO.output(actuator["motor_pins"][1], GPIO.LOW)
-                                GPIO.output(actuator["motor_pins"][0], GPIO.LOW)
+                                GPIO.output(actuator["motor_pins"]["cw"], GPIO.LOW)
+                                GPIO.output(actuator["motor_pins"]["ccw"], GPIO.LOW)
             time.sleep(0.1)
         
         #print(str(self.thread_name) +" "+ str(self.thread_ID));
