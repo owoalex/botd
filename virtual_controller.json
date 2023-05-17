@@ -8,7 +8,7 @@
     "keymap": [
         {
             "key": "w",
-            "expiry": 1,
+            "expiry": 0.2,
             "intents": [
                 {
                     "axis": "x_vel",
@@ -18,7 +18,7 @@
         },
         {
             "key": "a",
-            "expiry": 1,
+            "expiry": 0.2,
             "intents": [
                 {
                     "axis": "yaw_vel",
@@ -28,7 +28,7 @@
         },
         {
             "key": "s",
-            "expiry": 1,
+            "expiry": 0.2,
             "intents": [
                 {
                     "axis": "x_vel",
@@ -38,7 +38,7 @@
         },
         {
             "key": "d",
-            "expiry": 1,
+            "expiry": 0.2,
             "intents": [
                 {
                     "axis": "yaw_vel",

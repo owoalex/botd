@@ -23,8 +23,8 @@
             "encoder_step": 0.1,
             "has_encoder": true,
             "motor_pins": {
-                "cw": 33,
-                "ccw": 36
+                "cw": 36,
+                "ccw": 33
             },
             "encoder_pins": [13, 15]
         },
@@ -34,8 +34,8 @@
             "encoder_step": 0.1,
             "has_encoder": true,
             "motor_pins": {
-                "cw": 35, 
-                "ccw": 38,
+                "cw": 38, 
+                "ccw": 35
             },
             "encoder_pins": [16, 18]
         },
@@ -63,9 +63,9 @@
             "right": 0
         },
         "yaw": {
-            "front": -1,
-            "left": -1,
-            "right": -1
+            "front": 1,
+            "left": 1,
+            "right": 1
         }
     }
 }
