@@ -64,8 +64,11 @@ class BotClient(threading.Thread):
                             if output_motor_levels[actuator["name"]] > 0.1:
                                 GPIO.output(actuator["motor_pins"][0], GPIO.HIGH)
                                 GPIO.output(actuator["motor_pins"][1], GPIO.LOW)
-                            elif output_motor_levels[actuator["name"]] < 0.1:
+                            elif output_motor_levels[actuator["name"]] < -0.1:
                                 GPIO.output(actuator["motor_pins"][1], GPIO.HIGH)
+                                GPIO.output(actuator["motor_pins"][0], GPIO.LOW)
+                            else:
+                                GPIO.output(actuator["motor_pins"][1], GPIO.LOW)
                                 GPIO.output(actuator["motor_pins"][0], GPIO.LOW)
             time.sleep(0.1)
         
