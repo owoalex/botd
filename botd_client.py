@@ -20,6 +20,8 @@ class BotClient(threading.Thread):
  
         # helper function to execute the threads
     def run(self):
+        global current_order
+        global bot_definition
         time.sleep(1)
         print("Connecting to server @ %s" % (remote_server))
         remote_server_base_uri = "http://" + remote_server
@@ -32,16 +34,40 @@ class BotClient(threading.Thread):
             print("Autodetecting bot")
             bot_definition["remote_bot_id"] = "bot0"
         
-        current_order = {
-            "vel_x": 0,
-            "expiry": time.time() + 3
-        }
+        current_order = None
         
         while True:
             if not (current_order == None):
                 if (current_order["expiry"] < time.time()):
-                    
                     current_order = None
+                    for actuator in bot_definition["actuators"]:
+                        for pin in actuator["motor_pins"]:
+                            GPIO.output(pin, GPIO.LOW)
+                else:
+                    output_motor_levels = {}
+                    
+                    for actuator in bot_definition["actuators"]:
+                        output_motor_levels[actuator["name"]] = 0
+                    print(current_order)
+                    if "x_vel" in current_order:
+                        for motor in bot_definition["intents"]["x"]:
+                            output_motor_levels[motor] += bot_definition["intents"]["x"][motor] * current_order["x_vel"]
+                    if "y_vel" in current_order:
+                        print("MOVE Y")
+                    if "yaw_vel" in current_order:
+                        for motor in bot_definition["intents"]["yaw"]:
+                            output_motor_levels[motor] += bot_definition["intents"]["yaw"][motor] * current_order["yaw_vel"]
+                    #print(output_motor_levels)
+                    
+                    for actuator in bot_definition["actuators"]:
+                        if actuator["type"] == "BRUSHED":
+                            if output_motor_levels[actuator["name"]] > 0.1:
+                                GPIO.output(actuator["motor_pins"][0], GPIO.HIGH)
+                                GPIO.output(actuator["motor_pins"][1], GPIO.LOW)
+                            elif output_motor_levels[actuator["name"]] < 0.1:
+                                GPIO.output(actuator["motor_pins"][1], GPIO.HIGH)
+                                GPIO.output(actuator["motor_pins"][0], GPIO.LOW)
+            time.sleep(0.1)
         
         #print(str(self.thread_name) +" "+ str(self.thread_ID));
         
@@ -53,6 +79,8 @@ class BotServerHost(threading.Thread):
  
         # helper function to execute the threads
     def run(self):
+        global current_order
+        global bot_definition
         client_thread = BotClient("main_client", 128);
         client_thread.start()
         
@@ -71,6 +99,8 @@ class BotServerHost(threading.Thread):
 
 class BotServer(BaseHTTPRequestHandler):
     def do_POST(self):
+        global current_order
+        global bot_definition
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
             if (path_components[0] == ""):
@@ -113,8 +143,8 @@ class BotServer(BaseHTTPRequestHandler):
                 }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
         elif (path_components[0] == "cmd"):
-            print("INTENT:")
-            print(body)
+            #print("INTENT:")
+            #print(body)
             self.send_response(200)
             self.end_headers()
             reply_body = json.dumps({
@@ -122,11 +152,17 @@ class BotServer(BaseHTTPRequestHandler):
                     "intent": body
                 }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
+            
+            current_order = body
+            current_order["expiry"] = current_order["expiry"] + time.time()
+            
             ## TODO : PARSE INTENT
         else:
             self.do_GET()
         
     def do_PUT(self):
+        global current_order
+        global bot_definition
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
             if (path_components[0] == ""):
@@ -157,6 +193,8 @@ class BotServer(BaseHTTPRequestHandler):
             self.wfile.write((reply_body + "\n").encode("utf-8"))
     
     def do_GET(self):
+        global current_order
+        global bot_definition
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
             if (path_components[0] == ""):
@@ -238,6 +276,7 @@ if __name__ == "__main__":
                         for pin in actuator["motor_pins"]:
                             print("Activating motor pin %s" % (pin))
                             GPIO.setup(pin, GPIO.OUT)
+                            GPIO.output(pin, GPIO.LOW)
                         #for pin in actuator["encoder_pins"]:
                         #    print("Activating encoder pin %s" % (pin))
                         #    GPIO.setup(pin, GPIO.INPUT)

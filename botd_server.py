@@ -119,7 +119,7 @@ class BotServer(BaseHTTPRequestHandler):
                     
                     remote_bot_base_uri = "http://" + destination_definition["ip"] + ":" + str(destination_definition["port"])
                     bot_request = requests.post(url = remote_bot_base_uri + "/cmd", json = body)
-                    ret_data = request.json()
+                    ret_data = bot_request.json()
             else:
                 self.send_response(200)
                 self.end_headers()
