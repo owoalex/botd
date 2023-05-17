@@ -42,7 +42,7 @@ class BotClient(threading.Thread):
                     current_order = None
                     for actuator in bot_definition["actuators"]:
                         for pin in actuator["motor_pins"]:
-                            GPIO.output(pin, GPIO.LOW)
+                            GPIO.output(actuator["motor_pins"][pin], GPIO.LOW)
                 else:
                     output_motor_levels = {}
                     
@@ -277,9 +277,9 @@ if __name__ == "__main__":
                     #GPIO.setup(40, GPIO.OUT)
                     for actuator in bot_definition["actuators"]:
                         for pin in actuator["motor_pins"]:
-                            print("Activating motor pin %s" % (pin))
-                            GPIO.setup(pin, GPIO.OUT)
-                            GPIO.output(pin, GPIO.LOW)
+                            print("Activating motor pin %s" % (actuator["motor_pins"][pin]))
+                            GPIO.setup(actuator["motor_pins"][pin], GPIO.OUT)
+                            GPIO.output(actuator["motor_pins"][pin], GPIO.LOW)
                         #for pin in actuator["encoder_pins"]:
                         #    print("Activating encoder pin %s" % (pin))
                         #    GPIO.setup(pin, GPIO.INPUT)
