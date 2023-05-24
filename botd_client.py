@@ -31,7 +31,7 @@ class BotClient(threading.Thread):
         #print(data)
         
         if (bot_definition["type"] == "CONTROLLER"):
-            print("Autodetecting bot")
+            print("Setting remote to bot0")
             bot_definition["remote_bot_id"] = "bot0"
         
         current_order = None
