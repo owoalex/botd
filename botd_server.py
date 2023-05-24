@@ -5,12 +5,17 @@ import time
 import json
 from io import BytesIO
 import re
+import os
 import sys
 import requests
+import math
 import threading
 
 bot_list = []
 controller_list = []
+config = {
+        "disconnection_time": 5
+    }
 
 class ClientMonitor(threading.Thread):
     def __init__(self, thread_name):
@@ -19,20 +24,53 @@ class ClientMonitor(threading.Thread):
  
         # helper function to execute the threads
     def run(self):
+        global bot_list
+        global controller_list
+        global config
+        
         time.sleep(1)
         while (True):
             time.sleep(1)
             #print("Polling clients")
             for bot in bot_list:
-                remote_server_base_uri = "http://" + bot["ip"] + ":" + str(bot["port"])
-                params = {}
-                request = requests.get(url = remote_server_base_uri + "/", params = params)
-                data = request.json()
-                #print(data)
-                bot["last_status"] = data
-                bot["last_status_at"] = time.time()
+                if bot["connected"]:
+                    try:
+                        remote_server_base_uri = "http://" + bot["ip"] + ":" + str(bot["port"])
+                        params = {}
+                        request = requests.get(url = remote_server_base_uri + "/", params = params)
+                        data = request.json()
+                        #print(data)
+                        bot["last_status"] = data
+                        bot["last_status_at"] = time.time()
+                    except:
+                        ttd = (bot["last_status_at"] + config["disconnection_time"]) - time.time()
+                        if ttd > 0.5:
+                            print("Bot @ %s is not responding, will disconnect in %s seconds" % ((bot["ip"] + ":" + str(bot["port"])), str(round(ttd))))
+                        else:
+                            print("Disconnecting unresponsive robot @ %s :(" % (bot["ip"] + ":" + str(bot["port"])))
+                            bot["connected"] = False
+            for controller in controller_list:
+                if controller["connected"]:
+                    try:
+                        remote_server_base_uri = "http://" + controller["ip"] + ":" + str(controller["port"])
+                        params = {}
+                        request = requests.get(url = remote_server_base_uri + "/", params = params)
+                        data = request.json()
+                        #print(data)
+                        controller["last_status"] = data
+                        controller["last_status_at"] = time.time()
+                    except:
+                        ttd = (controller["last_status_at"] + config["disconnection_time"]) - time.time()
+                        if ttd > 0.5:
+                            print("Controller @ %s is not responding, will disconnect in %s seconds" % ((controller["ip"] + ":" + str(controller["port"])), str(round(ttd))))
+                        else:
+                            print("Disconnecting unresponsive controller @ %s :/" % (controller["ip"] + ":" + str(controller["port"])))
+                            controller["connected"] = False
 
 class BotServer(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        return
+    
     def do_POST(self):
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
@@ -64,6 +102,7 @@ class BotServer(BaseHTTPRequestHandler):
             
             device_definition = body
             device_definition["ip"] = self.client_address[0]
+            device_definition["connected"] = True
             
             idx = -1
             
@@ -76,9 +115,11 @@ class BotServer(BaseHTTPRequestHandler):
                     if (body["type"] == "BOT"):
                         bot_list.append(device_definition)
                         idx = len(bot_list) - 1
+                        print("New robot (bot%s) @ %s :D" % (str(idx), (device_definition["ip"] + ":" + str(device_definition["port"]))))
                     elif (body["type"] == "CONTROLLER"):
                         controller_list.append(device_definition)
                         idx = len(controller_list) - 1
+                        print("New controller (controller%s) @ %s :>" % (str(idx), (device_definition["ip"] + ":" + str(device_definition["port"]))))
                     else:
                         error = "INVALID_DEVICE_TYPE"
                 else:
@@ -257,3 +298,4 @@ if __name__ == "__main__":
         pass
     web_server.server_close()
     print("Server stopped.")
+    os._exit(0)

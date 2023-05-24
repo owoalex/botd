@@ -101,6 +101,9 @@ class BotServerHost(threading.Thread):
         
 
 class BotServer(BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        return
+    
     def do_POST(self):
         global current_order
         global bot_definition
