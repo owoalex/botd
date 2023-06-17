@@ -6,11 +6,15 @@ import json
 from io import BytesIO
 import re
 import sys
+import os
+import base64
 import requests
 import threading
 
 current_order = None
 bot_definition = None
+video_devices = {}
+video_buffers = {}
 
 class BotClient(threading.Thread):
     def __init__(self, thread_name, thread_ID):
@@ -22,6 +26,8 @@ class BotClient(threading.Thread):
     def run(self):
         global current_order
         global bot_definition
+        global video_devices
+        global video_buffers
         time.sleep(1)
         print("Connecting to server @ %s" % (remote_server))
         remote_server_base_uri = "http://" + remote_server
@@ -70,6 +76,21 @@ class BotClient(threading.Thread):
                             else:
                                 GPIO.output(actuator["motor_pins"]["cw"], GPIO.LOW)
                                 GPIO.output(actuator["motor_pins"]["ccw"], GPIO.LOW)
+            if "cameras" in bot_definition:
+                for camera in bot_definition["cameras"]:
+                    if video_devices[camera["name"]].isOpened():
+                        ret, frame = video_devices[camera["name"]].read()
+                        #cv2.imshow("uwu", frame)
+                        #cv2.waitKey()
+                        
+                        #cv2.imwrite("test.jpg", frame)
+                        
+                        frame_encode = cv2.imencode(".jpg", frame)[1]
+                        data_encode = numpy.array(frame_encode)
+                        byte_encode = data_encode.tobytes()
+                        video_buffers[camera["name"]] = byte_encode
+                    else:
+                        print("COULD NOT READ CAMERA (NOT OPENED)")
             time.sleep(0.1)
         
         #print(str(self.thread_name) +" "+ str(self.thread_ID));
@@ -140,14 +161,6 @@ class BotServer(BaseHTTPRequestHandler):
                     "request": body
                 }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
-        elif (re.compile("^camera[0-9]+$").match(path_components[0])):
-            self.send_response(200)
-            self.end_headers()
-            reply_body = json.dumps({
-                    "status": "OK",
-                    "request": body
-                }, indent=4)
-            self.wfile.write((reply_body + "\n").encode("utf-8"))
         elif (path_components[0] == "cmd"):
             #print("INTENT:")
             #print(body)
@@ -201,6 +214,7 @@ class BotServer(BaseHTTPRequestHandler):
     def do_GET(self):
         global current_order
         global bot_definition
+        global video_buffers
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
             if (path_components[0] == ""):
@@ -216,6 +230,40 @@ class BotServer(BaseHTTPRequestHandler):
                 "status": "OK"
             }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
+        elif (re.compile("^camera[0-9]+$").match(path_components[0])):
+            if (len(path_components) >= 2):
+                if (path_components[1] == "latest.jpg"):
+                    cameraidx = int(re.search(r'\d{0,3}$', path_components[0]).group())
+                    self.send_response(200)
+                    self.end_headers()
+                    reply_body = bytes(video_buffers[bot_definition["cameras"][cameraidx]["name"]])
+                    self.wfile.write(reply_body)
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    reply_body = json.dumps({
+                        "status": "ENDPOINT_NOT_FOUND",
+                        "error_at": path_components[1]
+                    }, indent=4)
+                    self.wfile.write((reply_body + "\n").encode("utf-8"))
+            else:
+                cameraidx = int(re.search(r'\d{0,3}$', path_components[0]).group())
+                self.send_response(200)
+                self.end_headers()
+                try:
+                    reply_body = json.dumps({
+                            "status": "OK",
+                            "camera_index": cameraidx,
+                            "camera_name": bot_definition["cameras"][cameraidx]["name"],
+                            "buffer": base64.b64encode(video_buffers[bot_definition["cameras"][cameraidx]["name"]]).decode("utf-8") 
+                        }, indent=4)
+                except IndexError:
+                    reply_body = json.dumps({
+                            "status": "INVALID_CAMERA_INDEX",
+                            "camera_index": cameraidx
+                        }, indent=4)
+                self.wfile.write((reply_body + "\n").encode("utf-8"))
         else:
             self.send_response(404)
             self.send_header("Content-type", "application/json")
@@ -271,6 +319,20 @@ if __name__ == "__main__":
         server_thread.start()
         
         if (bot_definition["type"] == "BOT"):
+            if "cameras" in bot_definition:
+                import cv2
+                import numpy
+                for camera in bot_definition["cameras"]:
+                    videodev = os.readlink(camera["path"]).split("/")[-1]
+                    videodevidx = re.search(r'\d{0,3}$', videodev).group()
+                    videodevpath = "/dev/video" + str(videodevidx)
+                    print("Camera %s at OpenCV path %s" % (camera["name"], videodevpath))
+                    video_buffers[camera["name"]] = bytearray()
+                    video_devices[camera["name"]] = cv2.VideoCapture(videodevpath)
+                    if not video_devices[camera["name"]].isOpened():
+                        print("FAILED TO OPEN CAMERA")
+            if (bot_definition["control_scheme"] == "TELEMETRY_ONLY"):
+                print("Telemetry-only robot")
             if (bot_definition["control_scheme"] == "RPI_ONBOARD_GPIO"):
                 try:
                     import RPi.GPIO as GPIO

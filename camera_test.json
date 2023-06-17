@@ -1,0 +1,16 @@
+{
+    "type": "BOT",
+    "name": "Camera Test",
+    "uuid": "e6189c40-395b-4ea7-bd02-748d226996d3",
+    "cameras": [
+        {
+            "name": "front_head",
+            "path": "/dev/v4l/by-id/usb-Azurewave_Integrated_Camera_0001-video-index0",
+            "fps": 30,
+            "resolution": [1280,720]
+        }
+    ],
+    "control_scheme": "TELEMETRY_ONLY",
+    "actuators": [],
+    "intents": {}
+}
