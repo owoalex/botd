@@ -11,12 +11,15 @@ import base64
 import requests
 import threading
 
+#define global variables
 current_order = None
 bot_definition = None
 video_devices = {}
 video_buffers = {}
 
+
 class BotClient(threading.Thread):
+    #initialise BotClient
     def __init__(self, thread_name, thread_ID):
         threading.Thread.__init__(self)
         self.thread_name = thread_name
@@ -36,6 +39,7 @@ class BotClient(threading.Thread):
         data = request.json()
         #print(data)
         
+        
         if (bot_definition["type"] == "CONTROLLER"):
             print("Setting remote to bot0")
             bot_definition["remote_bot_id"] = "bot0"
@@ -43,9 +47,12 @@ class BotClient(threading.Thread):
         current_order = None
         
         while True:
+
             if not (current_order == None):
+                #if current_order has expired, set current_order to None
                 if (current_order["expiry"] < time.time()):
                     current_order = None
+                    #Set all actuators pins GPIOs to low
                     for actuator in bot_definition["actuators"]:
                         for pin in actuator["motor_pins"]:
                             GPIO.output(actuator["motor_pins"][pin], GPIO.LOW)
@@ -76,6 +83,7 @@ class BotClient(threading.Thread):
                             else:
                                 GPIO.output(actuator["motor_pins"]["cw"], GPIO.LOW)
                                 GPIO.output(actuator["motor_pins"]["ccw"], GPIO.LOW)
+            #
             if "cameras" in bot_definition:
                 for camera in bot_definition["cameras"]:
                     if video_devices[camera["name"]].isOpened():
@@ -92,7 +100,7 @@ class BotClient(threading.Thread):
                     else:
                         print("COULD NOT READ CAMERA (NOT OPENED)")
             time.sleep(0.1)
-        
+            
         #print(str(self.thread_name) +" "+ str(self.thread_ID));
         
 class BotServerHost(threading.Thread):

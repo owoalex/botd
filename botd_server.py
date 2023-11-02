@@ -70,7 +70,12 @@ class ClientMonitor(threading.Thread):
 class BotServer(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return
-    
+
+    #process info given to pi from client
+    #do_POST responsibilities
+    #   configuration
+    #   
+
     def do_POST(self):
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
@@ -78,13 +83,17 @@ class BotServer(BaseHTTPRequestHandler):
                 path_components.pop(0)
         if (len(path_components) == 0):
             path_components.push("")
-            
+
+        #if has no content, treat this post request as a get 
         if (self.headers['Content-Length'] == None):
             self.do_GET()
             return
-        
+
+        #get content length as bytes
         content_length = int(self.headers['Content-Length'])
+        #get content of post request in a variable 
         body = self.rfile.read(content_length).decode("utf-8")
+        #try convert body from JSON to a generic dictionary. If fails, send back a message saying u fucked up
         try:
             body = json.loads(body)
         except ValueError:  # includes simplejson.decoder.JSONDecodeError
@@ -97,6 +106,9 @@ class BotServer(BaseHTTPRequestHandler):
             self.wfile.write((reply_body + "\n").encode("utf-8"))
             return
         
+        #if thats all worked then we start processing it:
+        
+        #if the request's first part says register then register the contents
         if (path_components[0] == "register"):
             error = None
             
@@ -143,8 +155,12 @@ class BotServer(BaseHTTPRequestHandler):
                     "status": error
                 }, indent=4)
                 self.wfile.write((reply_body + "\n").encode("utf-8"))
+
+        #if first part of path references a bot then ...
         elif (re.compile("^bot[0-9]+$").match(path_components[0])):
             if (len(path_components) > 1):
+
+                #if second part is cmd then they're sending a command, we process that
                 if (path_components[1] == "cmd"):
                     bot_number = int(path_components[0][3:])
                     destination_definition = bot_list[bot_number]
@@ -161,6 +177,8 @@ class BotServer(BaseHTTPRequestHandler):
                     remote_bot_base_uri = "http://" + destination_definition["ip"] + ":" + str(destination_definition["port"])
                     bot_request = requests.post(url = remote_bot_base_uri + "/cmd", json = body)
                     ret_data = bot_request.json()
+
+                #if second part isnt a command then assume they're just requesting status and return that
             else:
                 self.send_response(200)
                 self.end_headers()
@@ -169,6 +187,8 @@ class BotServer(BaseHTTPRequestHandler):
                         "request": body
                     }, indent=4)
                 self.wfile.write((reply_body + "\n").encode("utf-8"))
+
+        #same as before but ask for data of a controller instead of a bot
         elif (re.compile("^controller[0-9]+$").match(path_components[0])):
             self.send_response(200)
             self.end_headers()
@@ -177,9 +197,13 @@ class BotServer(BaseHTTPRequestHandler):
                     "request": body
                 }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
+        
+        #if its none of those then assume its a get request
         else:
             self.do_GET()
         
+
+    #for processing put requests (uploading files e.g. photos for a video feed)
     def do_PUT(self):
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
@@ -188,7 +212,11 @@ class BotServer(BaseHTTPRequestHandler):
         if (len(path_components) == 0):
             path_components.push("")
         
+        #if start of request lists a bot then they're identifiying themselves as a bot, use this data to...
         if (re.compile("^bot[0-9]+$").match(path_components[0])):
+
+            #if second part says camera then they're uploading camera data, process that
+            #this is processed by just writing it to a file for later use
             if (re.compile("^cam[0-9]+$").match(path_components[1])):
                 timestamp = time.time()
                 filename = "camera/" + path_components[1] + "-" + str(timestamp) + ".jpeg"
@@ -202,14 +230,17 @@ class BotServer(BaseHTTPRequestHandler):
                     "status": "OK"
                 }, indent=4)
                 self.wfile.write((reply_body + "\n").encode("utf-8"))
+            
+            #if second part of request isnt recognised then reply with error
             else:
                 self.send_response(404)
                 self.send_header("Content-type", "application/json")
                 self.end_headers()
                 reply_body = json.dumps({
-                    "status": "INVALID_CAMERA_NAME"
+                    "status": "INVALID_BOT_ENDPOINT"
                 }, indent=4)
                 self.wfile.write((reply_body + "\n").encode("utf-8"))
+        #if part of first request isnt a bot then return error
         else:
             self.send_response(404)
             self.send_header("Content-type", "application/json")
@@ -219,6 +250,7 @@ class BotServer(BaseHTTPRequestHandler):
             }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
     
+    #processing get requests, requesting data innit fam
     def do_GET(self):
         path_components = self.path.split("/")
         if (len(path_components) >= 1):
@@ -227,6 +259,7 @@ class BotServer(BaseHTTPRequestHandler):
         if (len(path_components) == 0):
             path_components.push("")
             
+        #if first part of request is empty then just send basic response "I got your request, Im working"
         if (path_components[0] == ""):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -235,6 +268,8 @@ class BotServer(BaseHTTPRequestHandler):
                 "status": "OK"
             }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
+        
+        #if first part says devices then return list of devices
         elif (path_components[0] == "devices"):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
@@ -245,6 +280,9 @@ class BotServer(BaseHTTPRequestHandler):
                 "controllers": controller_list
             }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
+        
+        #if first part is register then throw error because that should be going to POST not GET
+        #(could this rerout it to a do_post instead of throwing error?)
         elif (path_components[0] == "register"):
             self.send_response(401)
             self.send_header("Content-type", "application/json")
@@ -253,6 +291,8 @@ class BotServer(BaseHTTPRequestHandler):
                 "status": "POST_ONLY_ENDPOINT"
             }, indent=4)
             self.wfile.write((reply_body + "\n").encode("utf-8"))
+        
+        #if anything else throw error
         else:
             self.send_response(404)
             self.send_header("Content-type", "application/json")
@@ -263,6 +303,7 @@ class BotServer(BaseHTTPRequestHandler):
             self.wfile.write((reply_body + "\n").encode("utf-8"))
             
 
+#this part just runs the server and calls the above stuff when the requests come through
 if __name__ == "__main__":        
     switch_name = "PYFILE"
     host_name = ""
