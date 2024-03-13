@@ -315,9 +315,6 @@ if __name__ == "__main__":
         bot_definition = json.load(f)
         f.close()
         
-        server_thread = BotServerHost("main_server", 64);
-        server_thread.start()
-        
         if (bot_definition["type"] == "BOT"):
             if "cameras" in bot_definition:
                 import cv2
@@ -354,7 +351,12 @@ if __name__ == "__main__":
                     print("CANNOT START RPI CONTROL WITHOUT RPI MODULE")
                     print("Try: pip install RPi.GPIO")
                     
+            server_thread = BotServerHost("main_server", 64);
+            server_thread.start()
         elif (bot_definition["type"] == "CONTROLLER"):
+            server_thread = BotServerHost("main_server", 64);
+            server_thread.start()
+            
             if (bot_definition["control_scheme"] == "VIRTUAL_KEYBOARD"):
                 try:
                     import keyboard
