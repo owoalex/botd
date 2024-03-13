@@ -41,8 +41,9 @@ class BotClient(threading.Thread):
         
         
         if (bot_definition["type"] == "CONTROLLER"):
-            print("Setting remote to bot0")
-            bot_definition["remote_bot_id"] = "bot0"
+            print("Setting remote to bot0 (use flag --remotebot <bot_number> to change this)")
+            if not "remote_bot_id" in bot_definition:
+                bot_definition["remote_bot_id"] = "bot0"
         
         current_order = None
         
@@ -50,29 +51,39 @@ class BotClient(threading.Thread):
 
             if not (current_order == None):
                 #if current_order has expired, set current_order to None
+                output_motor_levels = {}
+                
                 if (current_order["expiry"] < time.time()):
                     current_order = None
-                    #Set all actuators pins GPIOs to low
-                    for actuator in bot_definition["actuators"]:
-                        for pin in actuator["motor_pins"]:
-                            GPIO.output(actuator["motor_pins"][pin], GPIO.LOW)
-                else:
-                    output_motor_levels = {}
                     
                     for actuator in bot_definition["actuators"]:
                         output_motor_levels[actuator["name"]] = 0
+                    #Set all actuators pins GPIOs to low
+                    #for actuator in bot_definition["actuators"]:
+                    #    
+                    #    for pin in actuator["motor_pins"]:
+                    #        GPIO.output(actuator["motor_pins"][pin], GPIO.LOW)
+                else:
+                    output_motor_levels = {}
+                    
+                    
                     print(current_order)
                     if "x_vel" in current_order:
                         for motor in bot_definition["intents"]["x"]:
+                            if not motor in output_motor_levels:
+                                output_motor_levels[motor] = 0
                             output_motor_levels[motor] += bot_definition["intents"]["x"][motor] * current_order["x_vel"]
                     if "y_vel" in current_order:
                         print("MOVE Y")
                     if "yaw_vel" in current_order:
                         for motor in bot_definition["intents"]["yaw"]:
+                            if not motor in output_motor_levels:
+                                output_motor_levels[motor] = 0
                             output_motor_levels[motor] += bot_definition["intents"]["yaw"][motor] * current_order["yaw_vel"]
                     #print(output_motor_levels)
                     
-                    for actuator in bot_definition["actuators"]:
+                for actuator in bot_definition["actuators"]:
+                    if actuator["name"] in output_motor_levels:
                         if actuator["type"] == "BRUSHED":
                             if output_motor_levels[actuator["name"]] > 0.1:
                                 GPIO.output(actuator["motor_pins"]["cw"], GPIO.HIGH)
@@ -83,6 +94,15 @@ class BotClient(threading.Thread):
                             else:
                                 GPIO.output(actuator["motor_pins"]["cw"], GPIO.LOW)
                                 GPIO.output(actuator["motor_pins"]["ccw"], GPIO.LOW)
+                        elif actuator["type"] == "ABSTRACTED_HTTP":
+                            int_level = str(round(output_motor_levels[actuator["name"]]))
+                            float_level = str(output_motor_levels[actuator["name"]])
+                            remote_bot = bot_definition["http_middleware_address"]
+                            print("Sending abstracted HTTP instruction to %s" % (remote_bot))
+                            parsed_path = actuator["endpoint"].replace("$int;", int_level).replace("$float;", float_level)
+                            remote_bot_uri = "http://" + remote_bot + "/" + parsed_path
+                            request = requests.get(url = remote_bot_uri)
+                            
             #
             if "cameras" in bot_definition:
                 for camera in bot_definition["cameras"]:
@@ -286,6 +306,7 @@ if __name__ == "__main__":
     switch_name = "PYFILE"
     host_name = ""
     remote_server = None
+    remote_bot = None
     config_file = None
     local_server_port = 8081
     for arg in sys.argv:
@@ -296,6 +317,8 @@ if __name__ == "__main__":
                         switch_name = "PORT"
                     if (arg == "--remote"):
                         switch_name = "REMOTE_SERVER"
+                    if (arg == "--remotebot"):
+                        switch_name = "REMOTE_BOT"
                 else:
                     if (arg == "-p"):
                         switch_name = "PORT"
@@ -309,12 +332,16 @@ if __name__ == "__main__":
         elif switch_name == "REMOTE_SERVER":
             remote_server = arg
             switch_name = None
+        elif switch_name == "REMOTE_BOT":
+            remote_bot = arg
+            switch_name = None
         elif switch_name == "PYFILE":
             switch_name = None
         else:
             print("Argument parse error!")
     if remote_server == None:
         print("No remote server supplied!")
+        print("python3 botd_client.py --remote <ip_address>[:port] <config_file>")
     elif config_file == None:
         print("No config file supplied!")
         print("python3 botd_client.py --remote <ip_address>[:port] <config_file>")
@@ -336,6 +363,8 @@ if __name__ == "__main__":
                     video_devices[camera["name"]] = cv2.VideoCapture(videodevpath)
                     if not video_devices[camera["name"]].isOpened():
                         print("FAILED TO OPEN CAMERA")
+            if (bot_definition["control_scheme"] == "SIMPLE_HTTP_SERVER"):
+                print("Simple HTTP Server")
             if (bot_definition["control_scheme"] == "TELEMETRY_ONLY"):
                 print("Telemetry-only robot")
             if (bot_definition["control_scheme"] == "RPI_ONBOARD_GPIO"):
@@ -362,6 +391,8 @@ if __name__ == "__main__":
             server_thread = BotServerHost("main_server", 64);
             server_thread.start()
         elif (bot_definition["type"] == "CONTROLLER"):
+            if not remote_bot == None:
+                bot_definition["remote_bot_id"] = remote_bot
             server_thread = BotServerHost("main_server", 64);
             server_thread.start()
             
@@ -402,6 +433,58 @@ if __name__ == "__main__":
                     print("CANNOT START VIRTUAL CONTROLLER WITHOUT KEYBOARD MODULE")
                     print("Try: pip install keyboard")
                     print("Note: On linux this script requires root")
+            elif (bot_definition["control_scheme"] == "KEYBOARD"):
+                try:
+                    import sys
+                    import tty
+                    import termios
+                    while True:
+                        fd = sys.stdin.fileno()
+                        old_settings = termios.tcgetattr(fd)
+                        try:
+                            tty.setraw(sys.stdin.fileno())
+                            ch = sys.stdin.read(1)
+                        finally:
+                            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                        if ch == 'e':
+                            exit()
+                            raise KeyboardInterrupt
+                        
+                        print(ch)
+                        
+                        key=ch
+                        
+                        intents = []
+                        expiry = 0
+                        for keymap in bot_definition["keymap"]:
+                            if (keymap["key"] == key):
+                                intents = intents + keymap["intents"]
+                                if expiry < keymap["expiry"]:
+                                    expiry = keymap["expiry"]
+                        built_intent = {"expiry": expiry}
+                        send_intent = False
+                        for intent in intents:
+                            send_intent = True
+                            if intent["axis"] in built_intent:
+                                built_intent[intent["axis"]] = intent["rate"] + built_intent[intent["axis"]]
+                            else:
+                                built_intent[intent["axis"]] = intent["rate"]
+                        
+                        if send_intent:
+                            if "remote_bot_id" in bot_definition:
+                                remote_server_base_uri = "http://" + remote_server
+                                bot_definition["port"] = local_server_port
+                                request = requests.post(url = remote_server_base_uri + "/" + bot_definition["remote_bot_id"] + "/cmd", json = built_intent)
+                                data = request.json()
+                            else:
+                                print("NO REMOTE BOT")
+                                
+   
+                except ImportError:
+                    print("CANNOT START VIRTUAL CONTROLLER WITHOUT KEYBOARD MODULE")
+                    print("Try: pip install keyboard")
+                    print("Note: On linux this script requires root")
+                                
                 
             
         
