@@ -314,9 +314,13 @@ if __name__ == "__main__":
                 if (arg.startswith("--")):
                     if (arg == "--port"):
                         switch_name = "PORT"
+                    if (arg == "--help"):
+                        switch_name = "HELP"
                 else:
                     if (arg == "-p"):
                         switch_name = "PORT"
+                    if (arg == "-h"):
+                        switch_name = "HELP"
             else:
                 remote_server = arg
         elif switch_name == "PORT":
@@ -326,6 +330,9 @@ if __name__ == "__main__":
             switch_name = None
         else:
             print("Argument parse error!")
+        if (switch_name == "HELP"):
+            print("python3 botd_server.py [--port <port_number>]")
+            exit()
     web_server = HTTPServer((host_name, local_server_port), BotServer)
     client_monitor = ClientMonitor("client_monitor");
     if host_name == "":

@@ -1,6 +1,6 @@
 {
     "type": "BOT",
-    "name": "Mars Rover",
+    "name": "Mars Rover Laplace",
     "uuid": "cba699ab-56f8-4731-b3a5-8de3871dfc06",
     "cameras": [],
     "control_scheme": "SIMPLE_HTTP_SERVER",

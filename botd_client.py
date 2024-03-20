@@ -34,16 +34,17 @@ class BotClient(threading.Thread):
         time.sleep(1)
         print("Connecting to server @ %s" % (remote_server))
         remote_server_base_uri = "http://" + remote_server
-        bot_definition["port"] = local_server_port
+        #bot_definition["port"] = local_server_port
         request = requests.post(url = remote_server_base_uri + "/register", json = bot_definition)
         data = request.json()
         #print(data)
         
         
         if (bot_definition["type"] == "CONTROLLER"):
-            print("Setting remote to bot0 (use flag --remotebot <bot_number> to change this)")
             if not "remote_bot_id" in bot_definition:
+                print("Bot ID not set, defaulting to bot0")
                 bot_definition["remote_bot_id"] = "bot0"
+            print("Connecting to " + bot_definition["remote_bot_id"] + " (use flag --bot <bot_id> to change this)")
         
         current_order = None
         
@@ -136,11 +137,13 @@ class BotServerHost(threading.Thread):
         client_thread = BotClient("main_client", 128);
         client_thread.start()
         
-        web_server = HTTPServer((host_name, local_server_port), BotServer)
-        if host_name == "":
-            print("Client responder starting on port %s" % (local_server_port))
+        
+        if bot_definition["hostname"] == "":
+            print("Client responder starting on port %s" % (bot_definition["port"]))
         else:
-            print("Client responder starting http://%s:%s" % (host_name, local_server_port))
+            print("Client responder starting http://%s:%s" % (bot_definition["hostname"], bot_definition["port"]))
+            
+        web_server = HTTPServer((bot_definition["hostname"], bot_definition["port"]), BotServer)
         try:
             web_server.serve_forever()
         except KeyboardInterrupt:
@@ -303,12 +306,14 @@ class BotServer(BaseHTTPRequestHandler):
             
 
 if __name__ == "__main__":  
+    import random
+    
     switch_name = "PYFILE"
     host_name = ""
     remote_server = None
     remote_bot = None
     config_file = None
-    local_server_port = 8081
+    local_server_port = random.randint(38000, 38999)
     for arg in sys.argv:
         if switch_name == None:
             if (arg.startswith("-")):
@@ -317,7 +322,7 @@ if __name__ == "__main__":
                         switch_name = "PORT"
                     if (arg == "--remote"):
                         switch_name = "REMOTE_SERVER"
-                    if (arg == "--remotebot"):
+                    if (arg == "--bot"):
                         switch_name = "REMOTE_BOT"
                 else:
                     if (arg == "-p"):
@@ -333,7 +338,7 @@ if __name__ == "__main__":
             remote_server = arg
             switch_name = None
         elif switch_name == "REMOTE_BOT":
-            remote_bot = arg
+            remote_bot = "bot" + arg
             switch_name = None
         elif switch_name == "PYFILE":
             switch_name = None
@@ -349,6 +354,9 @@ if __name__ == "__main__":
         f = open(config_file)
         bot_definition = json.load(f)
         f.close()
+        
+        bot_definition["port"] = local_server_port
+        bot_definition["hostname"] = host_name
         
         if (bot_definition["type"] == "BOT"):
             if "cameras" in bot_definition:
@@ -367,6 +375,8 @@ if __name__ == "__main__":
                 print("Simple HTTP Server")
             if (bot_definition["control_scheme"] == "TELEMETRY_ONLY"):
                 print("Telemetry-only robot")
+            if (bot_definition["control_scheme"] == "MIXED"):
+                print("Mixed control robot")
             if (bot_definition["control_scheme"] == "RPI_ONBOARD_GPIO"):
                 try:
                     import RPi.GPIO as GPIO
@@ -388,6 +398,7 @@ if __name__ == "__main__":
                     print("CANNOT START RPI CONTROL WITHOUT RPI MODULE")
                     print("Try: pip install RPi.GPIO")
                     
+            #print(bot_definition)
             server_thread = BotServerHost("main_server", 64);
             server_thread.start()
         elif (bot_definition["type"] == "CONTROLLER"):
@@ -396,7 +407,8 @@ if __name__ == "__main__":
             server_thread = BotServerHost("main_server", 64);
             server_thread.start()
             
-            if (bot_definition["control_scheme"] == "VIRTUAL_KEYBOARD"):
+            
+            if (bot_definition["control_scheme"] == "KEYBOARD_ROOT"):
                 try:
                     import keyboard
                     print("Starting virtual controller!")
@@ -421,7 +433,6 @@ if __name__ == "__main__":
                         if send_intent:
                             if "remote_bot_id" in bot_definition:
                                 remote_server_base_uri = "http://" + remote_server
-                                bot_definition["port"] = local_server_port
                                 request = requests.post(url = remote_server_base_uri + "/" + bot_definition["remote_bot_id"] + "/cmd", json = built_intent)
                                 data = request.json()
                             else:
@@ -433,6 +444,7 @@ if __name__ == "__main__":
                     print("CANNOT START VIRTUAL CONTROLLER WITHOUT KEYBOARD MODULE")
                     print("Try: pip install keyboard")
                     print("Note: On linux this script requires root")
+                    quit()
             elif (bot_definition["control_scheme"] == "KEYBOARD"):
                 try:
                     import sys
@@ -446,11 +458,12 @@ if __name__ == "__main__":
                             ch = sys.stdin.read(1)
                         finally:
                             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                        if ch == 'e':
-                            exit()
+                        if ch.encode("utf-8").hex() == "03":
+                            # horrible bodge
+                            quit()
                             raise KeyboardInterrupt
                         
-                        print(ch)
+                        print(ch.encode("utf-8").hex())
                         
                         key=ch
                         
@@ -473,17 +486,14 @@ if __name__ == "__main__":
                         if send_intent:
                             if "remote_bot_id" in bot_definition:
                                 remote_server_base_uri = "http://" + remote_server
-                                bot_definition["port"] = local_server_port
                                 request = requests.post(url = remote_server_base_uri + "/" + bot_definition["remote_bot_id"] + "/cmd", json = built_intent)
                                 data = request.json()
                             else:
                                 print("NO REMOTE BOT")
                                 
    
-                except ImportError:
-                    print("CANNOT START VIRTUAL CONTROLLER WITHOUT KEYBOARD MODULE")
-                    print("Try: pip install keyboard")
-                    print("Note: On linux this script requires root")
+                except KeyboardInterrupt:
+                    print("Keyboard interrupt, bailing out")
                                 
                 
             

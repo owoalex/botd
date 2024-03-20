@@ -1,0 +1,29 @@
+{
+    "type": "BOT",
+    "name": "Mars Rover Thebruno",
+    "uuid": "0d87f467-568a-43cd-998a-46a1817a28d8",
+    "cameras": [],
+    "control_scheme": "SIMPLE_HTTP_SERVER",
+    "middleware": ["python3 /home/rover/marsrover/dodgy-botd-middleware.py"],
+    "http_middleware_address": "192.168.1.147:8080",
+    "actuators": [
+        {
+            "name": "prop",
+            "type": "ABSTRACTED_HTTP",
+            "endpoint": "prop?$int;"
+        },
+        {
+            "name": "turn",
+            "type": "ABSTRACTED_HTTP",
+            "endpoint": "turn?$int;"
+        }
+    ],
+    "intents": {
+        "x": {
+            "prop": 100
+        },
+        "yaw": {
+            "turn": 45
+        }
+    }
+}

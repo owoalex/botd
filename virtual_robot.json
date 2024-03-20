@@ -1,0 +1,27 @@
+{
+    "type": "BOT",
+    "name": "Virtual Robot",
+    "uuid": "5c91e77f-39b3-4d85-85bb-331f614bd21e",
+    "cameras": [],
+    "control_scheme": "MIXED",
+    "actuators": [
+        {
+            "name": "left",
+            "type": "VIRTUAL"
+        },
+        {
+            "name": "right",
+            "type": "VIRTUAL"
+        }
+    ],
+    "intents": {
+        "x": {
+            "left": 1,
+            "right": 1
+        },
+        "yaw": {
+            "left": 1,
+            "right": -1
+        }
+    }
+}
