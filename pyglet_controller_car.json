@@ -1,0 +1,49 @@
+{
+    "type": "CONTROLLER",
+    "name": "Hardware Controller (Car)",
+    "uuid": "e9191d75-a1e8-478e-b26d-cb3ec2377eb2",
+    "default_remote_bot": "92faa9a1-c183-449d-9af4-69c23ec77c74",
+    "viewports": ["front_head"],
+    "control_scheme": "PYGLET_CONTROLLER",
+    "default_intent": {
+        "x_vel": 0,
+        "yaw_vel": 0
+    },
+    "keymap": [
+        {
+            "input": "left_trigger",
+            "expiry": 0,
+            "intents": [
+                {
+                    "axis": "x_vel",
+                    "offset": 0,
+                    "dead_below": 0.2,
+                    "mult": -1
+                }
+            ]
+        },
+        {
+            "input": "right_trigger",
+            "expiry": 0,
+            "intents": [
+                {
+                    "axis": "x_vel",
+                    "offset": 0,
+                    "dead_below": 0.2,
+                    "mult": 1
+                }
+            ]
+        },
+        {
+            "input": "left_stick_x",
+            "expiry": 0,
+            "intents": [
+                {
+                    "axis": "yaw_vel",
+                    "offset": 0,
+                    "mult": 1
+                }
+            ]
+        }
+    ]
+}

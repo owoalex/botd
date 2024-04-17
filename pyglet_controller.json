@@ -1,0 +1,32 @@
+{
+    "type": "CONTROLLER",
+    "name": "Hardware Controller",
+    "uuid": "56455df8-709a-4166-bbb0-9e69f8be306f",
+    "default_remote_bot": "92faa9a1-c183-449d-9af4-69c23ec77c74",
+    "viewports": ["front_head"],
+    "control_scheme": "PYGLET_CONTROLLER",
+    "keymap": [
+        {
+            "input": "left_stick_y",
+            "expiry": 0,
+            "intents": [
+                {
+                    "axis": "x_vel",
+                    "offset": 0,
+                    "mult": 1
+                }
+            ]
+        },
+        {
+            "input": "left_stick_x",
+            "expiry": 0,
+            "intents": [
+                {
+                    "axis": "yaw_vel",
+                    "offset": 0,
+                    "mult": 1
+                }
+            ]
+        }
+    ]
+}
